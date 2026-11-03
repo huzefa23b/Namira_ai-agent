@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:math';
 
 void main() {
   runApp(const NamiraApp());
@@ -44,107 +45,10 @@ class NamiraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Namira',
+      title: 'Namira AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const AuthScreen(),
-    );
-  }
-}
-
-class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
-
-  @override
-  State<AuthScreen> createState() => _AuthScreenState();
-}
-
-class _AuthScreenState extends State<AuthScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLogin = true;
-
-  void _submit() {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email daalna zaroori hai!")),
-      );
-      return;
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen(userEmail: email)),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  _isLogin ? "Welcome Back ❤️" : "Create Account ✨",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 32, 
-                    fontWeight: FontWeight.bold, 
-                    color: AppTheme.softWhite
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _isLogin ? "Log in to continue to Namira" : "Sign up to start chatting",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.greyText, fontSize: 16),
-                ),
-                const SizedBox(height: 40),
-                TextField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(hintText: 'Email Address'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(hintText: 'Password'),
-                  obscureText: true,
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPink,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    _isLogin ? 'Log In' : 'Sign Up', 
-                    style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextButton(
-                  onPressed: () => setState(() => _isLogin = !_isLogin),
-                  child: Text(
-                    _isLogin ? "Don't have an account? Sign Up" : "Already have an account? Log In",
-                    style: const TextStyle(color: AppTheme.primaryPink),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      home: const ChatScreen(),
     );
   }
 }
@@ -157,141 +61,139 @@ class ChatMessage {
   ChatMessage({required this.text, required this.isUser, required this.timestamp});
 }
 
-class HomeScreen extends StatefulWidget {
-  final String userEmail;
-  const HomeScreen({super.key, required this.userEmail});
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final TextEditingController _msgController = TextEditingController();
-  bool _intruderDetected = false;
-  String _intruderStatus = "Monitoring Active 🔒";
+  final ScrollController _scrollController = ScrollController();
+  bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
-    // Welcome greeting
-    _messages.add(ChatMessage(
-      text: "Hello Huzefa! Namira is active and monitoring security logs. Send 'Hi' to test intruder alert & selfie simulation.", 
-      isUser: false, 
-      timestamp: DateTime.now()
-    ));
+    // Initial greeting from Namira
+    _messages.add(
+      ChatMessage(
+        text: "Hello Huzefa! Main Namira hoon, aapki personal AI assistant. Aaj main aapki kya madad kar sakti hoon?",
+        isUser: false,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
-  void _handleSend() {
+  void _sendMessage() async {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true, timestamp: DateTime.now()));
       _msgController.clear();
+      _isTyping = true;
     });
 
-    // Check if intruder sent "Hi" or similar trigger
-    if (text.toLowerCase() == 'hi' || text.toLowerCase() == 'hello') {
-      setState(() {
-        _intruderDetected = true;
-        _intruderStatus = "🚨 INTRUDER ALERT! Front Camera Selfie Captured & Chat Logged to Local File!";
-      });
+    _scrollToBottom();
 
-      // Add security response
-      Timer(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          setState(() {
-            _messages.add(ChatMessage(
-              text: "📸 [SECURITY SYSTEM]: Unauthorized 'Hi' detected! Front camera selfie snapshot saved successfully. All conversation logs have been exported to `namira_chat_log.txt` on your laptop/device.",
-              isUser: false,
-              timestamp: DateTime.now(),
-            ));
-          });
-        }
-      });
+    // Simulate intelligent AI response
+    await Future.delayed(const Duration(milliseconds: 900));
+
+    String aiReply = _generateAIResponse(text);
+
+    setState(() {
+      _isTyping = false;
+      _messages.add(ChatMessage(text: aiReply, isUser: false, timestamp: DateTime.now()));
+    });
+
+    _scrollToBottom();
+  }
+
+  String _generateAIResponse(String query) {
+    final q = query.toLowerCase();
+    
+    if (q.contains('hello') || q.contains('hi') || q.contains('hey')) {
+      return "Hello Huzefa! Sab kuch badhiya chal raha hai. Boliye, kaun sa project ya task execute karna hai?";
+    } else if (q.contains('code') || q.contains('flutter') || q.contains('app') || q.contains('git')) {
+      return "Codebase bilkul clean aur optimized hai. Aapke GitHub par repository (`huzefa23b/Namira_ai-agent`) successfully synced hai. Aur bataiye, kya features add karne hain?";
+    } else if (q.contains('time') || q.contains('date')) {
+      return "Abhi current time 03 November 2026, raat ke 8 bajne wale hain. Sab systems perfectly online hain!";
+    } else if (q.contains('who are you') || q.contains('naam kya hai') || q.contains('namira')) {
+      return "Main Namira hoon — aapki personal AI agent, jo aapke Windows PC aur mobile devices ko control aur automate karti hai!";
+    } else if (q.contains('kya haal hai') || q.contains('kaise ho')) {
+      return "Main ekdum fit aur ready hoon! Aap bataiye Huzefa, aapka din kaisa ja raha hai?";
     } else {
-      Timer(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _messages.add(ChatMessage(
-              text: "Namira received: '$text'. All secure logs updated in real-time.",
-              isUser: false,
-              timestamp: DateTime.now(),
-            ));
-          });
-        }
-      });
+      List<String> intelligentReplies = [
+        "Yeh ek behtareen idea hai Huzefa! Isko hum jaldi se implement kar dete hain.",
+        "Aapki baat bilkul samajh aa gayi. Main is par kaam shuru kar rahi hoon.",
+        "Sabhi parameters check kar liye hain. Isko smoothly execute karte hain!",
+        "Perfect! Aur koi specific requirement hai iske alawa?",
+      ];
+      return intelligentReplies[Random().nextInt(intelligentReplies.length)];
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('❤️ NAMIRA SECURITY CHAT'),
+        backgroundColor: AppTheme.cardColor,
+        elevation: 0,
+        title: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.greenAccent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Namira AI',
+              style: TextStyle(color: AppTheme.softWhite, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.security, color: AppTheme.primaryPink),
-            tooltip: 'Security Status',
+            icon: const Icon(Icons.refresh, color: AppTheme.greyText),
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: AppTheme.cardColor,
-                  title: const Text('Intruder Protection Status'),
-                  content: Text(_intruderStatus),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const AuthScreen()),
-              );
+              setState(() {
+                _messages.clear();
+                _messages.add(
+                  ChatMessage(
+                    text: "Chat reset ho gayi hai. Phir se shuru karte hain Huzefa!",
+                    isUser: false,
+                    timestamp: DateTime.now(),
+                  ),
+                );
+              });
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // Security Status Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            color: _intruderDetected ? Colors.red.withOpacity(0.3) : AppTheme.cardColor,
-            child: Row(
-              children: [
-                Icon(
-                  _intruderDetected ? Icons.warning_amber_rounded : Icons.shield_rounded,
-                  color: _intruderDetected ? Colors.redAccent : AppTheme.primaryPink,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _intruderStatus,
-                    style: TextStyle(
-                      color: _intruderDetected ? Colors.redAccent : AppTheme.softWhite,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Chat Messages List
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -300,11 +202,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                     decoration: BoxDecoration(
                       color: msg.isUser ? AppTheme.primaryPink : AppTheme.cardColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18).copyWith(
+                        bottomRight: msg.isUser ? const Radius.circular(4) : const Radius.circular(18),
+                        bottomLeft: !msg.isUser ? const Radius.circular(4) : const Radius.circular(18),
+                      ),
                     ),
                     child: Text(
                       msg.text,
@@ -315,7 +220,15 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          // Input Bar
+          if (_isTyping)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              alignment: Alignment.centerLeft,
+              child: const Text(
+                "Namira is typing...",
+                style: TextStyle(color: AppTheme.greyText, fontStyle: FontStyle.italic),
+              ),
+            ),
           Container(
             padding: const EdgeInsets.all(12),
             color: AppTheme.cardColor,
@@ -324,16 +237,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: TextField(
                     controller: _msgController,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
                     decoration: const InputDecoration(
-                      hintText: 'Type message or send "Hi"...',
+                      hintText: 'Ask Namira anything...',
                     ),
-                    onSubmitted: (_) => _handleSend(),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send, color: AppTheme.primaryPink),
-                  onPressed: _handleSend,
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send_rounded, color: AppTheme.primaryPink, size: 28),
                 ),
               ],
             ),
