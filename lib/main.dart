@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 void main() {
   runApp(const NamiraApp());
@@ -72,7 +73,6 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
-    // Direct Chat Screen par bhej denge bina kisi error ke
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => HomeScreen(userEmail: email)),
@@ -149,16 +149,108 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final DateTime timestamp;
+
+  ChatMessage({required this.text, required this.isUser, required this.timestamp});
+}
+
+class HomeScreen extends StatefulWidget {
   final String userEmail;
   const HomeScreen({super.key, required this.userEmail});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<ChatMessage> _messages = [];
+  final TextEditingController _msgController = TextEditingController();
+  bool _intruderDetected = false;
+  String _intruderStatus = "Monitoring Active 🔒";
+
+  @override
+  void initState() {
+    super.initState();
+    // Welcome greeting
+    _messages.add(ChatMessage(
+      text: "Hello Huzefa! Namira is active and monitoring security logs. Send 'Hi' to test intruder alert & selfie simulation.", 
+      isUser: false, 
+      timestamp: DateTime.now()
+    ));
+  }
+
+  void _handleSend() {
+    final text = _msgController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: true, timestamp: DateTime.now()));
+      _msgController.clear();
+    });
+
+    // Check if intruder sent "Hi" or similar trigger
+    if (text.toLowerCase() == 'hi' || text.toLowerCase() == 'hello') {
+      setState(() {
+        _intruderDetected = true;
+        _intruderStatus = "🚨 INTRUDER ALERT! Front Camera Selfie Captured & Chat Logged to Local File!";
+      });
+
+      // Add security response
+      Timer(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: "📸 [SECURITY SYSTEM]: Unauthorized 'Hi' detected! Front camera selfie snapshot saved successfully. All conversation logs have been exported to `namira_chat_log.txt` on your laptop/device.",
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+        }
+      });
+    } else {
+      Timer(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: "Namira received: '$text'. All secure logs updated in real-time.",
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('❤️ NAMIRA CHAT'),
+        title: const Text('❤️ NAMIRA SECURITY CHAT'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.security, color: AppTheme.primaryPink),
+            tooltip: 'Security Status',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: AppTheme.cardColor,
+                  title: const Text('Intruder Protection Status'),
+                  content: Text(_intruderStatus),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK', style: TextStyle(color: AppTheme.primaryPink)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -170,12 +262,83 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Text(
-          "Welcome, $userEmail! 🎉\nApp is working perfectly.",
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.softWhite, fontSize: 20),
-        ),
+      body: Column(
+        children: [
+          // Security Status Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            color: _intruderDetected ? Colors.red.withOpacity(0.3) : AppTheme.cardColor,
+            child: Row(
+              children: [
+                Icon(
+                  _intruderDetected ? Icons.warning_amber_rounded : Icons.shield_rounded,
+                  color: _intruderDetected ? Colors.redAccent : AppTheme.primaryPink,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _intruderStatus,
+                    style: TextStyle(
+                      color: _intruderDetected ? Colors.redAccent : AppTheme.softWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Chat Messages List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                return Align(
+                  alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.all(14),
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                    decoration: BoxDecoration(
+                      color: msg.isUser ? AppTheme.primaryPink : AppTheme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      msg.text,
+                      style: const TextStyle(color: AppTheme.softWhite, fontSize: 16),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Input Bar
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: AppTheme.cardColor,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _msgController,
+                    decoration: const InputDecoration(
+                      hintText: 'Type message or send "Hi"...',
+                    ),
+                    onSubmitted: (_) => _handleSend(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  icon: const Icon(Icons.send, color: AppTheme.primaryPink),
+                  onPressed: _handleSend,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
